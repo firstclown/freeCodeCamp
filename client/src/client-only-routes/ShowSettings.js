@@ -1,23 +1,21 @@
-import React from 'react';
+import React, { Fragment } from 'react';
 import PropTypes from 'prop-types';
-import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
 import { createSelector } from 'reselect';
 import { Grid, Button } from '@freecodecamp/react-bootstrap';
 import Helmet from 'react-helmet';
 
+import { apiLocation } from '../../config/env.json';
 import {
   signInLoadingSelector,
   userSelector,
-  isSignedInSelector
+  isSignedInSelector,
+  hardGoTo as navigate
 } from '../redux';
 import { submitNewAbout, updateUserFlag, verifyCert } from '../redux/settings';
 import { createFlashMessage } from '../components/Flash/redux';
 
-import Layout from '../components/layouts/Default';
-import Spacer from '../components/helpers/Spacer';
-import Loader from '../components/helpers/Loader';
-import FullWidthRow from '../components/helpers/FullWidthRow';
+import { FullWidthRow, Link, Loader, Spacer } from '../components/helpers';
 import About from '../components/settings/About';
 import Privacy from '../components/settings/Privacy';
 import Email from '../components/settings/Email';
@@ -25,12 +23,13 @@ import Internet from '../components/settings/Internet';
 import Portfolio from '../components/settings/Portfolio';
 import Honesty from '../components/settings/Honesty';
 import Certification from '../components/settings/Certification';
-import RedirectHome from '../components/RedirectHome';
+import DangerZone from '../components/settings/DangerZone';
 
 const propTypes = {
   createFlashMessage: PropTypes.func.isRequired,
-  isSignedIn: PropTypes.bool,
-  showLoading: PropTypes.bool,
+  isSignedIn: PropTypes.bool.isRequired,
+  navigate: PropTypes.func.isRequired,
+  showLoading: PropTypes.bool.isRequired,
   submitNewAbout: PropTypes.func.isRequired,
   toggleNightMode: PropTypes.func.isRequired,
   updateInternetSettings: PropTypes.func.isRequired,
@@ -97,22 +96,24 @@ const mapStateToProps = createSelector(
   })
 );
 
-const mapDispatchToProps = dispatch =>
-  bindActionCreators(
-    {
-      createFlashMessage,
-      submitNewAbout,
-      toggleNightMode: theme => updateUserFlag({ theme }),
-      updateInternetSettings: updateUserFlag,
-      updateIsHonest: updateUserFlag,
-      updatePortfolio: updateUserFlag,
-      updateQuincyEmail: sendQuincyEmail => updateUserFlag({ sendQuincyEmail }),
-      verifyCert
-    },
-    dispatch
-  );
+const mapDispatchToProps = {
+  createFlashMessage,
+  navigate,
+  submitNewAbout,
+  toggleNightMode: theme => updateUserFlag({ theme }),
+  updateInternetSettings: updateUserFlag,
+  updateIsHonest: updateUserFlag,
+  updatePortfolio: updateUserFlag,
+  updateQuincyEmail: sendQuincyEmail => updateUserFlag({ sendQuincyEmail }),
+  verifyCert
+};
 
-function ShowSettings(props) {
+const createHandleSignoutClick = navigate => e => {
+  e.preventDefault();
+  return navigate(`${apiLocation}/signout`);
+};
+
+export function ShowSettings(props) {
   const {
     createFlashMessage,
     isSignedIn,
@@ -147,6 +148,7 @@ function ShowSettings(props) {
       website,
       portfolio
     },
+    navigate,
     showLoading,
     updateQuincyEmail,
     updateInternetSettings,
@@ -156,21 +158,15 @@ function ShowSettings(props) {
   } = props;
 
   if (showLoading) {
-    return (
-      <Layout>
-        <div className='loader-wrapper'>
-          <Loader />
-        </div>
-      </Layout>
-    );
+    return <Loader fullScreen={true} />;
   }
 
   if (!showLoading && !isSignedIn) {
-    return <RedirectHome />;
+    return navigate(`${apiLocation}/signin`);
   }
 
   return (
-    <Layout>
+    <Fragment>
       <Helmet>
         <title>Settings | freeCodeCamp.org</title>
       </Helmet>
@@ -178,27 +174,27 @@ function ShowSettings(props) {
         <main>
           <Spacer size={2} />
           <FullWidthRow>
-            <Button
-              block={true}
-              bsSize='lg'
-              bsStyle='primary'
-              className='btn-invert'
-              href={`/${username}`}
-              >
+            <Link
+              className='btn-invert btn btn-lg btn-primary btn-block'
+              to={`/${username}`}
+            >
               Show me my public portfolio
-            </Button>
+            </Link>
             <Button
               block={true}
               bsSize='lg'
               bsStyle='primary'
               className='btn-invert'
               href={'/signout'}
-              >
+              onClick={createHandleSignoutClick(navigate)}
+            >
               Sign me out of freeCodeCamp
             </Button>
           </FullWidthRow>
           <Spacer />
-          <h1 className='text-center'>{`Account Settings for ${username}`}</h1>
+          <h1 className='text-center' style={{ overflowWrap: 'break-word' }}>
+            {`Account Settings for ${username}`}
+          </h1>
           <About
             about={about}
             currentTheme={theme}
@@ -250,10 +246,10 @@ function ShowSettings(props) {
             verifyCert={verifyCert}
           />
           <Spacer />
-          {/* <DangerZone /> */}
+          <DangerZone />
         </main>
       </Grid>
-    </Layout>
+    </Fragment>
   );
 }
 
